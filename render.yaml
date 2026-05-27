@@ -1,0 +1,36 @@
+# Render blueprint for the backend. Free web service, hosted providers only.
+# The corpus must already be ingested into the Supabase pgvector database
+# (run the ingest once locally with these same env vars pointed at Supabase).
+services:
+  - type: web
+    name: docs-agent-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: LLM_PROVIDER
+        value: openrouter
+      - key: EMBEDDING_PROVIDER
+        value: jina
+      - key: RERANK_PROVIDER
+        value: jina
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: EMBEDDING_DIM
+        value: "1024"
+      - key: LLM_MODEL
+        value: meta-llama/llama-3.3-70b-instruct:free
+      # Secrets and the frontend origin are set in the Render dashboard.
+      - key: CORS_ORIGINS
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: JINA_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false

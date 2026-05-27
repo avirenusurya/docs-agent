@@ -1,14 +1,12 @@
-# Core API
+# Shared runtime deps. The deployed instance installs only these: it uses
+# hosted embedding/rerank APIs and pgvector, so it never loads ONNX or torch.
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic-settings==2.7.1
 httpx==0.28.1
-
-# Retrieval pipeline
 numpy>=2.2
 PyYAML==6.0.2
-fastembed==0.8.0          # ONNX embeddings + cross-encoder rerank, no torch
 
-# pgvector store (deployed instance only; local dev uses the in-process store)
+# pgvector store (the deployed instance; local dev uses the in-process store)
 psycopg[binary]==3.2.3
 pgvector==0.3.6

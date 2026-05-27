@@ -1,0 +1,5 @@
+# Local dev + eval. Adds the ONNX models so embeddings and the cross-encoder
+# reranker run in-process with no external API. Install this one for local work:
+#   pip install -r requirements-local.txt
+-r requirements.txt
+fastembed==0.8.0
