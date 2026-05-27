@@ -24,7 +24,7 @@ services:
       - key: EMBEDDING_DIM
         value: "1024"
       - key: LLM_MODEL
-        value: nvidia/nemotron-3-super-120b-a12b:free
+        value: openai/gpt-oss-120b:free
       # Secrets and the frontend origin are set in the Render dashboard.
       - key: CORS_ORIGINS
         sync: false
