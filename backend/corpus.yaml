@@ -1,0 +1,30 @@
+# The corpus the assistant answers over. Swap or extend these sources and
+# re-run `python -m app.rag.ingest` to point the assistant at other docs.
+corpus:
+  name: mcp-anthropic
+
+sources:
+  # Model Context Protocol docs, shipped as a single llms-full dump.
+  - name: mcp
+    format: llms-full
+    url: https://modelcontextprotocol.io/llms-full.txt
+
+  # Claude developer docs, fetched per page from the llms.txt index.
+  # Kept to the building-with-Claude topics; cloud-deployment pages excluded.
+  - name: anthropic
+    format: index
+    url: https://platform.claude.com/llms.txt
+    allow:
+      - tool-use
+      - agents-and-tools
+      - build-with-claude
+      - prompt-engineering
+    deny:
+      - amazon-bedrock
+      - vertex-ai
+      - microsoft-foundry
+      - platform-on-aws
+      - claude-on-
+      - claude-in-
+      - mcp-tunnels/deploy
+      - mcp-tunnels/helm

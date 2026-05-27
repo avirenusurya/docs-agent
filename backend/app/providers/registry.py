@@ -10,6 +10,7 @@ from functools import lru_cache
 
 from app.config import Settings, get_settings
 from app.providers.base import Embedder, LLM, Reranker
+from app.rag.store.base import VectorStore
 
 
 @lru_cache
@@ -48,6 +49,20 @@ def get_reranker() -> Reranker:
 
         return JinaReranker(s)
     raise ValueError(f"unknown rerank_provider: {s.rerank_provider}")
+
+
+@lru_cache
+def get_store() -> VectorStore:
+    s = get_settings()
+    if s.vector_store == "local":
+        from app.rag.store.local import LocalVectorStore
+
+        return LocalVectorStore(s.local_store_path)
+    if s.vector_store == "pgvector":
+        from app.rag.store.pgvector import PgVectorStore
+
+        return PgVectorStore(s.database_url, s.embedding_dim)
+    raise ValueError(f"unknown vector_store: {s.vector_store}")
 
 
 def describe_providers(s: Settings | None = None) -> dict:
