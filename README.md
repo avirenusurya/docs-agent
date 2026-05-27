@@ -1,61 +1,86 @@
+<div align="center">
+
 # docs-agent
 
-An agentic RAG assistant for developer docs. You ask a question, it rewrites it
-into a search query, retrieves from a docs corpus, reranks the candidates with a
-cross-encoder, and answers with citations. Every answer ships with a trace of
-what the agent did at each step, and there's an eval harness that measures
-whether a change to the pipeline actually helps instead of guessing.
+**An agentic RAG assistant for developer docs.**
 
-The default corpus is the Model Context Protocol docs plus a focused slice of
-the Claude developer docs. The corpus is swappable: edit `backend/corpus.yaml`,
-re-run the ingest, and the assistant answers over whatever you point it at.
+You ask a question, it plans a search, retrieves, reranks the candidates with a
+cross-encoder, and answers with citations. Every answer carries a trace of what
+the agent did at each step.
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+
+<img src="docs/screenshot.png" alt="docs-agent answering a question about defining an MCP tool, with cited sources and the expanded agent trace" width="600">
+
+</div>
+
+---
+
+## What it does
+
+- **Plans, not one-shot.** A small agent loop rewrites the question into a search
+  query, retrieves, and decides whether to search again or answer.
+- **Reranks for a reason.** A cross-encoder reorders the candidates, and that
+  choice is backed by an eval instead of a hunch (numbers below).
+- **Cites and shows its work.** Answers carry `[n]` citations, and every request
+  returns its steps: the rewritten query, which chunks came back, the rerank
+  scores, and which sources the answer used.
+- **Provider-agnostic.** The chat model, embedder, reranker, and vector store
+  each sit behind a small interface. Local dev runs ONNX models (fastembed, no
+  torch) and an in-process store, so there is nothing to spin up. Deploy points
+  the same code at a hosted embed/rerank API and pgvector on Supabase.
+- **Swappable corpus.** Edit `backend/corpus.yaml`, re-run the ingest, and the
+  assistant answers over whatever you point it at. The default is the Model
+  Context Protocol docs plus a focused slice of the Claude developer docs
+  (3,590 chunks).
 
 ## How it works
 
-A question runs through a small agent loop:
-
-1. The model rewrites the question into a focused search query.
-2. Retrieval pulls a wide set of candidate chunks (bi-encoder, vector search).
-3. A cross-encoder reranks those candidates and keeps the best few.
-4. The model reads the top chunks and either searches again or answers with
-   `[n]` citations back to the sources.
-
-The loop runs on a small JSON protocol rather than native function calling, so
-it works on any chat model, including the free ones on OpenRouter. Each step is
-recorded, which is what the trace panel in the UI shows.
-
-## Design choices
-
-- **Provider-agnostic.** The chat model, embedder, reranker, and vector store
-  each sit behind a small interface. Local dev runs ONNX models (fastembed, no
-  torch) and an in-process store, so there's nothing to spin up. The deployed
-  instance points the same code at a hosted embedding/rerank API and pgvector
-  on Supabase. One code path, two setups.
-
-- **The reranker is measured, not assumed.** The eval harness compares the
-  pipeline with the cross-encoder on and off. On this corpus the reranker takes
-  recall@5 from 0.88 to 0.96, which is the number that matters because the agent
-  answers from the top 5 chunks. It costs some top-1 precision (hit@1 0.76 to
-  0.56, MRR 0.82 to 0.72), which would matter more for a "single best link"
-  feature than for feeding context to an LLM. Reranking is on by default for
-  that reason, and the harness is what made the call defensible.
-
-- **The agent is observable.** Every request returns its steps: the rewritten
-  query, which chunks came back, the rerank scores, and which sources the answer
-  cited. No guessing about why it said what it said.
-
-## Stack
-
-- Backend: Python, FastAPI
-- Frontend: React, Vite
-- Vector store: pgvector on Supabase (in-process store for local dev)
-- Models: OpenRouter for chat. ONNX embed/rerank locally, Jina API in deploy
-
-## Run it locally
-
-Backend:
-
 ```
+question
+   │
+   ▼
+rewrite the query ─▶ retrieve top-k (bi-encoder) ─▶ rerank (cross-encoder) ─▶ answer with [n] citations
+   ▲                                                                              │
+   └──────────────────────── search again if the results are thin ◀──────────────┘
+```
+
+The loop talks to the model through a small JSON action protocol rather than
+native function calling, so it runs the same on any chat model, including the
+free ones on OpenRouter. Each step is recorded, which is what the trace panel
+in the UI shows.
+
+## Retrieval, measured
+
+The reranker is on by default, but only because the eval harness says it should
+be. Over a 25-question labeled set, with the cross-encoder off vs on:
+
+| metric  | vector only | + reranker | delta  |
+| ------- | :---------: | :--------: | :----: |
+| hit@1   |    0.76     |    0.56    | -0.20  |
+| hit@3   |    0.88     |    0.92    | +0.04  |
+| hit@5   |    0.88     |    0.96    | +0.08  |
+| MRR     |    0.82     |    0.72    | -0.10  |
+
+hit@5 is the number that matters here, because the agent answers from the top 5
+chunks. The reranker takes it from 0.88 to 0.96. It costs some top-1 precision
+(hit@1 and MRR drop), which would matter more for a "single best link" feature
+than for feeding context to an LLM. So reranking stays on, and the harness is
+what made that call.
+
+Answers are also graded end to end by an LLM judge (`--judge`). On the sample it
+scored well, but the judge shares a model family with the answerer, so I read it
+as a sanity check, not proof.
+
+## Quick start
+
+**Backend**
+
+```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-local.txt
@@ -64,21 +89,25 @@ python -m app.rag.ingest      # build the index (downloads the corpus once)
 uvicorn app.main:app --reload
 ```
 
-Frontend:
+**Frontend**
 
-```
+```bash
 cd frontend
 npm install
 cp .env.example .env          # VITE_API_BASE defaults to localhost:8000
-npm run dev
+npm run dev                   # http://localhost:5173
 ```
+
+The chat model runs on free OpenRouter models by default
+(`openai/gpt-oss-120b:free`). They are rate-limited per model, so if one is busy,
+swap in another `:free` id in `backend/.env`.
 
 ## Eval
 
-```
+```bash
 cd backend
-python -m app.eval.run         # retrieval metrics, reranker on vs off
-python -m app.eval.run --judge # also grade end-to-end answers (LLM-as-judge)
+python -m app.eval.run         # retrieval metrics, reranker off vs on
+python -m app.eval.run --judge # also grade end-to-end answers (needs an LLM key)
 ```
 
 The test set lives in `backend/app/eval/testset.yaml`: questions paired with the
@@ -87,18 +116,18 @@ agent on each question and grades the answer against the docs it retrieved.
 
 ## Deploy
 
-- **Database:** a Supabase Postgres with the `vector` extension. Put the
+- **Database.** A Supabase Postgres with the `vector` extension. Put the
   connection string in `DATABASE_URL`.
-- **Ingest into it once:** run the ingest locally with `VECTOR_STORE=pgvector`,
+- **Ingest into it once.** Run the ingest locally with `VECTOR_STORE=pgvector`,
   `EMBEDDING_PROVIDER=jina`, `EMBEDDING_DIM=1024`, and the database and Jina keys
-  set, so the embeddings in the index match what the deployed API will query with.
-- **Backend:** Render free web service. `render.yaml` has the blueprint; set the
-  secrets (`OPENROUTER_API_KEY`, `JINA_API_KEY`, `DATABASE_URL`) and `CORS_ORIGINS`
-  in the dashboard.
-- **Frontend:** Vercel. Root directory `frontend`, build `npm run build`, output
+  set, so the stored embeddings match what the deployed API will query with.
+- **Backend.** Render free web service. `render.yaml` has the blueprint. Set the
+  secrets (`OPENROUTER_API_KEY`, `JINA_API_KEY`, `DATABASE_URL`) and
+  `CORS_ORIGINS` in the dashboard.
+- **Frontend.** Vercel. Root directory `frontend`, build `npm run build`, output
   `dist`, and set `VITE_API_BASE` to the Render URL.
 
-## Layout
+## Project layout
 
 ```
 backend/
