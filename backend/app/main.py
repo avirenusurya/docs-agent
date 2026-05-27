@@ -1,15 +1,14 @@
-"""FastAPI entry point.
-
-For now this exposes health and a config summary. Retrieval, the agent /chat
-endpoint, and the eval routes get wired in as the later phases land.
-"""
+"""FastAPI entry point."""
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
+from app.agent.loop import run_agent
 from app.config import get_settings
 from app.providers.registry import describe_providers
+from app.rag.ingest import load_manifest
 
 settings = get_settings()
 
@@ -23,6 +22,20 @@ app.add_middleware(
 )
 
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list[ChatMessage] = []
+    use_rerank: bool = True
+    k: int | None = None
+    top_n: int | None = None
+    max_steps: int | None = None
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -32,3 +45,30 @@ def health() -> dict:
 def config() -> dict:
     """Which providers this instance is wired to. No secrets returned."""
     return describe_providers(settings)
+
+
+@app.get("/corpus")
+def corpus() -> dict:
+    """What's currently indexed (from the ingest manifest)."""
+    manifest = load_manifest()
+    if not manifest:
+        raise HTTPException(404, "no corpus ingested yet; run `python -m app.rag.ingest`")
+    return manifest
+
+
+@app.post("/chat")
+def chat(req: ChatRequest) -> dict:
+    if not req.message.strip():
+        raise HTTPException(400, "message is empty")
+    try:
+        result = run_agent(
+            req.message,
+            history=[m.model_dump() for m in req.history],
+            k=req.k,
+            top_n=req.top_n,
+            use_rerank=req.use_rerank,
+            max_steps=req.max_steps,
+        )
+    except RuntimeError as e:  # e.g. missing API key
+        raise HTTPException(503, str(e))
+    return result.to_dict()
