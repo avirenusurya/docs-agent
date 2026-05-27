@@ -15,10 +15,15 @@ export default function App() {
   const [useRerank, setUseRerank] = useState(true);
   const [corpus, setCorpus] = useState(null);
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "dark");
   const endRef = useRef(null);
 
   useEffect(() => { getCorpus().then(setCorpus); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem("docs-agent-theme", theme); } catch { /* ignore */ }
+  }, [theme]);
 
   async function send(text) {
     text = text.trim();
@@ -51,10 +56,20 @@ export default function App() {
             {corpus ? `${corpus.corpus} (${corpus.total_chunks} chunks)` : "the docs"}
           </p>
         </div>
-        <label className="rerank mono" title="Compare the pipeline with the cross-encoder reranker on or off">
-          <input type="checkbox" checked={useRerank} onChange={(e) => setUseRerank(e.target.checked)} />
-          reranker {useRerank ? "on" : "off"}
-        </label>
+        <div className="head-controls">
+          <button
+            type="button"
+            className="theme-toggle mono"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title="Switch light / dark"
+          >
+            {theme === "dark" ? "☀ light" : "☾ dark"}
+          </button>
+          <label className="rerank mono" title="Compare the pipeline with the cross-encoder reranker on or off">
+            <input type="checkbox" checked={useRerank} onChange={(e) => setUseRerank(e.target.checked)} />
+            reranker {useRerank ? "on" : "off"}
+          </label>
+        </div>
       </header>
 
       <main className="thread">
