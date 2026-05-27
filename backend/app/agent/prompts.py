@@ -77,16 +77,21 @@ def _balanced_objects(text: str) -> list[str]:
     return spans
 
 
-def parse_action(text: str) -> dict | None:
-    """Find the JSON action in a model reply. The model sometimes wraps it in
-    prose or code fences, and an answer can itself contain a JSON example, so we
-    return the first balanced object that actually carries an "action" key."""
+def extract_json(text: str, require_key: str | None = None) -> dict | None:
+    """Return the first balanced JSON object in a model reply, tolerating prose
+    and code fences around it. If require_key is given, skip objects that lack
+    it (so an answer containing a JSON example isn't mistaken for the action)."""
     text = text.strip()
     for candidate in [text, *_balanced_objects(text)]:
         try:
             obj = json.loads(candidate)
         except json.JSONDecodeError:
             continue
-        if isinstance(obj, dict) and "action" in obj:
+        if isinstance(obj, dict) and (require_key is None or require_key in obj):
             return obj
     return None
+
+
+def parse_action(text: str) -> dict | None:
+    """Find the JSON action ({"action": ...}) in a model reply."""
+    return extract_json(text, require_key="action")

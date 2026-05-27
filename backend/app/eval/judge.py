@@ -6,7 +6,7 @@ answer against the docs it retrieved, on a 1-5 scale, and explains the score.
 """
 from __future__ import annotations
 
-from app.agent.prompts import parse_action
+from app.agent.prompts import extract_json
 from app.providers.registry import get_llm
 
 JUDGE_SYSTEM = """You grade a documentation assistant. You are given a question, \
@@ -29,7 +29,7 @@ def judge_answer(question: str, answer: str, context: list[str]) -> dict:
         [{"role": "system", "content": JUDGE_SYSTEM}, {"role": "user", "content": user}],
         temperature=0.0,
     )
-    parsed = parse_action(raw) or {}
+    parsed = extract_json(raw, require_key="score") or {}
     try:
         score = int(parsed.get("score", 0))
     except (TypeError, ValueError):
