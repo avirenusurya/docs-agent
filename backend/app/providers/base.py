@@ -10,6 +10,16 @@ from __future__ import annotations
 from typing import Protocol, runtime_checkable
 
 
+class LLMError(RuntimeError):
+    """An upstream LLM call failed. Carries an HTTP status for the API to relay
+    (e.g. 429 when the provider rate-limits us) so the UI can show a real reason
+    instead of a generic 500."""
+
+    def __init__(self, message: str, status: int = 502):
+        super().__init__(message)
+        self.status = status
+
+
 @runtime_checkable
 class LLM(Protocol):
     """A chat model. Messages are OpenAI-style dicts: {"role", "content"}."""

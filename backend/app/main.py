@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from app.agent.loop import run_agent
 from app.config import get_settings
+from app.providers.base import LLMError
 from app.providers.registry import describe_providers
 from app.rag.ingest import load_manifest
 
@@ -69,6 +70,8 @@ def chat(req: ChatRequest) -> dict:
             use_rerank=req.use_rerank,
             max_steps=req.max_steps,
         )
+    except LLMError as e:  # upstream model error (rate limit, etc.); relay status
+        raise HTTPException(e.status, str(e))
     except RuntimeError as e:  # e.g. missing API key
         raise HTTPException(503, str(e))
     return result.to_dict()

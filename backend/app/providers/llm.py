@@ -9,6 +9,7 @@ from __future__ import annotations
 import httpx
 
 from app.config import Settings
+from app.providers.base import LLMError
 
 
 class OpenRouterLLM:
@@ -44,7 +45,22 @@ class OpenRouterLLM:
             "temperature": self.default_temperature if temperature is None else temperature,
             "max_tokens": self.default_max_tokens if max_tokens is None else max_tokens,
         }
-        resp = self._client.post("/chat/completions", json=payload)
-        resp.raise_for_status()
+        try:
+            resp = self._client.post("/chat/completions", json=payload)
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            if status == 429:
+                raise LLMError(
+                    f"'{self.model}' is rate limited right now. On OpenRouter's free "
+                    "tier that usually means the per-minute or daily cap. Wait a bit "
+                    "and retry, switch LLM_MODEL, or add credits.",
+                    status=429,
+                ) from e
+            if status in (401, 403):
+                raise LLMError("The OpenRouter API key was rejected.", status=502) from e
+            raise LLMError(f"The model provider returned an error ({status}).", status=502) from e
+        except httpx.RequestError as e:
+            raise LLMError(f"Could not reach the model provider: {e}", status=503) from e
         data = resp.json()
         return data["choices"][0]["message"]["content"] or ""
