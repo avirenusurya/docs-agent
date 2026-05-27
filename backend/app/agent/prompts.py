@@ -49,24 +49,44 @@ def render_context(sources: list[Source]) -> str:
     return "\n".join(lines)
 
 
-_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
+def _balanced_objects(text: str) -> list[str]:
+    """Return the top-level {...} spans in text, honoring strings so braces
+    inside quoted values don't throw off the depth count."""
+    spans, depth, start = [], 0, None
+    in_str = esc = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                spans.append(text[start : i + 1])
+                start = None
+    return spans
 
 
 def parse_action(text: str) -> dict | None:
-    """Pull the JSON action out of a model reply, tolerating code fences and
-    stray prose around it."""
+    """Find the JSON action in a model reply. The model sometimes wraps it in
+    prose or code fences, and an answer can itself contain a JSON example, so we
+    return the first balanced object that actually carries an "action" key."""
     text = text.strip()
-    if text.startswith("```"):
-        text = text.strip("`")
-        text = text[text.find("{"):] if "{" in text else text
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        pass
-    m = _JSON_RE.search(text)
-    if m:
+    for candidate in [text, *_balanced_objects(text)]:
         try:
-            return json.loads(m.group(0))
+            obj = json.loads(candidate)
         except json.JSONDecodeError:
-            return None
+            continue
+        if isinstance(obj, dict) and "action" in obj:
+            return obj
     return None

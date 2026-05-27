@@ -24,7 +24,7 @@ services:
       - key: EMBEDDING_DIM
         value: "1024"
       - key: LLM_MODEL
-        value: meta-llama/llama-3.3-70b-instruct:free
+        value: nvidia/nemotron-3-super-120b-a12b:free
       # Secrets and the frontend origin are set in the Render dashboard.
       - key: CORS_ORIGINS
         sync: false

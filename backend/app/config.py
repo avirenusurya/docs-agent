@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openrouter"
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "meta-llama/llama-3.3-70b-instruct:free"
+    llm_model: str = "nvidia/nemotron-3-super-120b-a12b:free"
     llm_temperature: float = 0.1
     llm_max_tokens: int = 1024
 

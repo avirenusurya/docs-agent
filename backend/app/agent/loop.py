@@ -59,10 +59,15 @@ def run_agent(message: str, history: list[dict] | None = None, *, k: int | None 
         convo.append({"role": "assistant", "content": raw})
 
         if not action or action.get("action") not in {"search", "answer"}:
-            trace.append(Step(index=i, kind="fallback", latency_ms=latency,
-                              note="model reply was not a valid JSON action"))
-            return _finalize(raw.strip() or "Sorry, I couldn't form an answer.",
-                             [], sources, trace, settings.llm_model)
+            # The model skipped the JSON envelope and just wrote the answer.
+            # That's still an answer: take the text and pull its inline [n] cites.
+            text = raw.strip()
+            cited = _collect_citations(None, text, sources)
+            trace.append(Step(index=i, kind="answer" if text else "fallback",
+                              retrieved_ns=cited, latency_ms=latency,
+                              note="answered without the JSON envelope" if text else "empty reply"))
+            return _finalize(text or "Sorry, I couldn't form an answer.",
+                             cited, sources, trace, settings.llm_model)
 
         if action["action"] == "search":
             query = (action.get("query") or message).strip()
