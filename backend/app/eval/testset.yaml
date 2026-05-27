@@ -1,0 +1,104 @@
+# Labeled retrieval test set. Each item is a question and the doc page(s) that
+# actually answer it (matched as a url substring). Used for recall@k and MRR,
+# and as the question pool for the LLM-as-judge answer eval.
+# Gold paths were taken from the ingested corpus so every label is reachable.
+
+- id: mcp-tools
+  question: How do I define a tool and its input schema in MCP?
+  gold: ["specification/2025-11-25/server/tools"]
+
+- id: mcp-transports
+  question: What transports does MCP support?
+  gold: ["specification/2025-11-25/basic/transports"]
+
+- id: mcp-resources
+  question: What are resources in MCP and how does a client read them?
+  gold: ["specification/2025-11-25/server/resources"]
+
+- id: mcp-prompts
+  question: How do server-provided prompts work in MCP?
+  gold: ["specification/2025-11-25/server/prompts"]
+
+- id: mcp-sampling
+  question: What is sampling in MCP and how does a server request a completion?
+  gold: ["specification/2025-11-25/client/sampling"]
+
+- id: mcp-elicitation
+  question: What is elicitation in MCP?
+  gold: ["specification/2025-11-25/client/elicitation"]
+
+- id: mcp-roots
+  question: What are roots in MCP?
+  gold: ["specification/2025-11-25/client/roots"]
+
+- id: mcp-lifecycle
+  question: How does the MCP connection lifecycle and initialization handshake work?
+  gold: ["specification/2025-11-25/basic/lifecycle"]
+
+- id: mcp-build-server
+  question: How do I build an MCP server?
+  gold: ["docs/develop/build-server"]
+
+- id: mcp-build-client
+  question: How do I build an MCP client?
+  gold: ["docs/develop/build-client"]
+
+- id: mcp-architecture
+  question: What is the overall architecture of MCP?
+  gold: ["docs/learn/architecture"]
+
+- id: mcp-authorization
+  question: How does OAuth authorization work in the MCP base protocol?
+  gold: ["specification/2025-11-25/basic/authorization"]
+
+- id: anth-prompt-caching
+  question: What is prompt caching and how do I use it with the Claude API?
+  gold: ["build-with-claude/prompt-caching"]
+
+- id: anth-handle-tool-calls
+  question: How do I handle tool calls Claude returns and send results back?
+  gold: ["tool-use/handle-tool-calls"]
+
+- id: anth-how-tool-use
+  question: How does tool use work with Claude end to end?
+  gold: ["tool-use/how-tool-use-works"]
+
+- id: anth-context-windows
+  question: How large is Claude's context window and how are tokens counted?
+  gold: ["build-with-claude/context-windows"]
+
+- id: anth-extended-thinking
+  question: What is extended thinking in Claude?
+  gold: ["build-with-claude/extended-thinking"]
+
+- id: anth-embeddings
+  question: How do I create text embeddings with Claude?
+  gold: ["build-with-claude/embeddings"]
+
+- id: anth-bash-tool
+  question: What is the bash tool and how does Claude use it?
+  gold: ["tool-use/bash-tool"]
+
+- id: anth-code-execution
+  question: How does the code execution tool work?
+  gold: ["tool-use/code-execution-tool"]
+
+- id: anth-memory-tool
+  question: What is the memory tool and how does it persist context across turns?
+  gold: ["tool-use/memory-tool"]
+
+- id: anth-batch
+  question: How does batch processing work in the Claude API?
+  gold: ["build-with-claude/batch-processing"]
+
+- id: anth-streaming
+  question: How do I stream responses from the Claude API?
+  gold: ["build-with-claude/streaming"]
+
+- id: anth-citations
+  question: What are citations and how do I enable them?
+  gold: ["build-with-claude/citations"]
+
+- id: anth-mcp-connector
+  question: How do I connect Claude to a remote MCP server with the MCP connector?
+  gold: ["agents-and-tools/mcp-connector"]
