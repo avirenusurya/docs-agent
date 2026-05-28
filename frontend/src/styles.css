@@ -68,12 +68,12 @@ body {
 .mono { font-family: var(--mono); }
 
 .app {
-  max-width: 760px;
+  max-width: 960px;
   margin: 0 auto;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 0 20px;
+  padding: 0 24px;
 }
 
 .head {
