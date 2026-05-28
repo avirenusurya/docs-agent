@@ -8,8 +8,9 @@ from pydantic import BaseModel
 from app.agent.loop import run_agent
 from app.config import get_settings
 from app.providers.base import LLMError
-from app.providers.registry import describe_providers
-from app.rag.ingest import load_manifest
+from app.providers.registry import describe_providers, get_store
+from app.rag.corpus import load_sources
+from app.rag.ingest import DEFAULT_CONFIG, load_manifest
 
 settings = get_settings()
 
@@ -50,11 +51,28 @@ def config() -> dict:
 
 @app.get("/corpus")
 def corpus() -> dict:
-    """What's currently indexed (from the ingest manifest)."""
+    """What's currently indexed. Prefers the manifest written by the local
+    ingest; falls back to a live read of the store + corpus.yaml so the
+    deployed instance (which never runs the ingest) still reports correctly."""
     manifest = load_manifest()
-    if not manifest:
+    if manifest:
+        return manifest
+    try:
+        count = get_store().count()
+    except Exception:
+        raise HTTPException(503, "vector store unavailable")
+    if count == 0:
         raise HTTPException(404, "no corpus ingested yet; run `python -m app.rag.ingest`")
-    return manifest
+    name, _ = load_sources(DEFAULT_CONFIG)
+    return {
+        "corpus": name,
+        "embedding_model": settings.embedding_model_hosted
+        if settings.embedding_provider == "jina"
+        else settings.embedding_model_local,
+        "embedding_dim": settings.embedding_dim,
+        "vector_store": settings.vector_store,
+        "total_chunks": count,
+    }
 
 
 @app.post("/chat")
