@@ -16,7 +16,7 @@ the agent did at each step.
 
 [**Live demo**](https://docs-agent-wine.vercel.app)
 
-<img src="docs/screenshot.png" alt="docs-agent home view with three example questions" width="720">
+<img src="docs/screenshot.png?v=2" alt="docs-agent home view with three example questions" width="720">
 
 </div>
 
