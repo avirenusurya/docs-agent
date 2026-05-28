@@ -14,9 +14,13 @@ the agent did at each step.
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
 ![pgvector](https://img.shields.io/badge/pgvector-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
+[**Live demo**](https://docs-agent-wine.vercel.app)
+
 <img src="docs/screenshot.png" alt="docs-agent answering a question about defining an MCP tool, with cited sources and the expanded agent trace" width="600">
 
 </div>
+
+> **First load:** the API runs on Render's free tier and sleeps when idle, so the first question can take 30 to 60 seconds to wake the server. Subsequent answers return in normal time.
 
 ---
 
