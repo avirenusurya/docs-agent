@@ -11,6 +11,8 @@ Local: fastembed's ONNX cross-encoder. Hosted: Jina's reranker API.
 """
 from __future__ import annotations
 
+import time
+
 import httpx
 
 from app.config import Settings
@@ -44,8 +46,18 @@ class JinaReranker:
             return []
         payload = {"model": self._model, "query": query,
                    "documents": documents, "return_documents": False}
-        resp = self._client.post("/rerank", json=payload)
-        resp.raise_for_status()
+        attempt, max_attempts = 0, 6
+        while True:
+            resp = self._client.post("/rerank", json=payload)
+            if resp.status_code < 400:
+                break
+            transient = resp.status_code == 429 or 500 <= resp.status_code < 600
+            attempt += 1
+            if not transient or attempt >= max_attempts:
+                resp.raise_for_status()
+            retry_after = resp.headers.get("retry-after")
+            wait = float(retry_after) if retry_after else min(60.0, 5.0 * 2 ** (attempt - 1))
+            time.sleep(wait)
         # API returns results sorted by score; put them back in input order.
         scores = [0.0] * len(documents)
         for r in resp.json()["results"]:

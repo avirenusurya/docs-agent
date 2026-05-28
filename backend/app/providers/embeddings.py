@@ -6,6 +6,8 @@ instruction on the query side, which is handled here so callers don't have to.
 """
 from __future__ import annotations
 
+import time
+
 import httpx
 
 from app.config import Settings
@@ -51,8 +53,20 @@ class JinaEmbedder:
             "dimensions": self.dim,
             "input": texts,
         }
-        resp = self._client.post("/embeddings", json=payload)
-        resp.raise_for_status()
+        # Free-tier token-per-minute caps cause transient 429s on the embed
+        # endpoint, especially during ingest. Retry on 429 / 5xx with backoff.
+        attempt, max_attempts = 0, 6
+        while True:
+            resp = self._client.post("/embeddings", json=payload)
+            if resp.status_code < 400:
+                break
+            transient = resp.status_code == 429 or 500 <= resp.status_code < 600
+            attempt += 1
+            if not transient or attempt >= max_attempts:
+                resp.raise_for_status()
+            retry_after = resp.headers.get("retry-after")
+            wait = float(retry_after) if retry_after else min(60.0, 5.0 * 2 ** (attempt - 1))
+            time.sleep(wait)
         rows = sorted(resp.json()["data"], key=lambda r: r["index"])
         return [r["embedding"] for r in rows]
 
