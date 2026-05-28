@@ -16,7 +16,7 @@ the agent did at each step.
 
 [**Live demo**](https://docs-agent-wine.vercel.app)
 
-<img src="docs/screenshot.png" alt="docs-agent answering a question about defining an MCP tool, with cited sources and the expanded agent trace" width="600">
+<img src="docs/screenshot.png" alt="docs-agent home view with example questions, sliced diagonally to show both light and dark themes in a single screenshot" width="720">
 
 </div>
 
